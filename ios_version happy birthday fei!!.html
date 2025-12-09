@@ -1,0 +1,1894 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <!-- 加入 viewport-fit=cover 以適應 iPhone 瀏海屏 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>阿妃生日快樂！</title>
+    <!-- 引入圓潤字體 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@800&display=swap" rel="stylesheet">
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background-color: #050510; 
+            font-family: 'Microsoft JhengHei', sans-serif; 
+            touch-action: none; /* 禁止預設觸控行為 */
+            -webkit-user-select: none; /* iOS 禁止選取文字 */
+            user-select: none;
+            -webkit-touch-callout: none; /* iOS 禁止長按跳出選單 */
+        }
+        #canvas-container { width: 100%; height: 100vh; display: block; cursor: move; }
+        
+        /* 標題與遮罩層 */
+        #title-overlay { position: absolute; top: 15%; left: 50%; transform: translate(-50%, -50%); color: #fff; text-align: center; pointer-events: none; z-index: 10; width: 100%; }
+        /* 進入蛋糕轉場為淺灰色 (模擬閃光) */
+        #transition-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #e6e6e6; opacity: 0; pointer-events: none; z-index: 100; transition: opacity 1.2s ease-in-out; }
+        #floating-text { position: absolute; top: 45%; left: 50%; transform: translate(-50%, -50%); font-size: 1.5rem; font-weight: 900; text-shadow: 0 0 5px #000; opacity: 0; pointer-events: none; z-index: 150; white-space: nowrap; transition: opacity 0.3s, top 0.3s ease-out; }
+        #floating-text.show { opacity: 1; top: 40%; }
+
+        /* 主標題樣式 */
+        h1 { font-family: 'Nunito', sans-serif; font-size: 3.5rem; margin: 0; font-weight: 800; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.5); transition: all 0.5s ease; }
+        h1.neon-active {
+            text-shadow: 0 0 7px #fff, 0 0 10px #fff, 0 0 21px #fff, 0 0 42px #ff1493, 0 0 82px #ff1493, 0 0 92px #ff1493, 0 0 102px #ff1493, 0 0 151px #ff1493;
+            animation: neon-pulse 1.5s ease-in-out infinite alternate;
+        }
+        @keyframes neon-pulse {
+            from { text-shadow: 0 0 4px #fff, 0 0 10px #fff, 0 0 18px #fff, 0 0 38px #ff1493, 0 0 73px #ff1493, 0 0 80px #ff1493, 0 0 94px #ff1493, 0 0 140px #ff1493; }
+            to { text-shadow: 0 0 2px #fff, 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #ff1493, 0 0 35px #ff1493, 0 0 40px #ff1493, 0 0 50px #ff1493, 0 0 75px #ff1493; }
+        }
+        
+        /* 副標題樣式 - 初始狀態為可見 */
+        #main-subtitle { 
+            font-size: 1.2rem; 
+            color: rgba(255, 255, 255, 0.7); 
+            font-weight: 600; 
+            letter-spacing: 1px; 
+            transition: opacity 0.3s ease; /* 加快消失速度 */
+            opacity: 1; /* 初始設為可見 */
+            min-height: 1.5em; /* 佔位防止跳動 */
+        }
+        
+        /* 重啟按鈕容器定位 */
+        #btn-replay-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 50;
+        }
+        /* 桌面版移至右下角 */
+        @media (min-width: 768px) {
+            #btn-replay-container {
+                left: auto;
+                right: 20px;
+                transform: none;
+            }
+        }
+        
+        /* 重啟按鈕樣式 */
+        #btn-replay {
+            background-color: #ff55aa; /* 鮮豔的桃紅 */
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 4px 10px rgba(255, 85, 170, 0.4);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            line-height: 1;
+            pointer-events: auto; /* 確保可以點擊 */
+            margin-left: 0;
+        }
+        #btn-replay:hover {
+            background-color: #ff77bb;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 15px rgba(255, 85, 170, 0.6);
+        }
+        #btn-replay:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 5px rgba(255, 85, 170, 0.4);
+        }
+
+        /* 彈窗樣式 (保持原樣式) */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); display: flex; justify-content: center; align-items: center; z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-box { position: relative; background-color: #fff; padding: 2rem; border-radius: 15px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 340px; max-width: 85%; min-height: 180px; display: flex; flex-direction: column; justify-content: center; align-items: center; transform: scale(0.8); transition: transform 0.3s; overflow: hidden; }
+        .modal-overlay.active .modal-box { transform: scale(1); }
+        .modal-text { color: #333; font-size: 1.3rem; font-weight: bold; margin-bottom: 25px; line-height: 1.5; width: 100%; }
+        .modal-buttons { display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; width: 100%; }
+        .btn { padding: 10px 20px; font-size: 1rem; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; min-width: 80px; transition: transform 0.1s; }
+        .btn:active { transform: scale(0.95); }
+        .btn-confirm { background-color: #81D8D0; color: #fff; }
+        .btn-cancel { background-color: #f0f0f0; color: #555; }
+        .btn-danger { background-color: #ff3333; color: #fff; }
+        .value-badge { position: absolute; top: 15px; right: -30px; background-color: #ff3333; color: #fff; font-size: 0.8rem; padding: 5px 30px; transform: rotate(45deg); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .modal-overlay.click-anywhere { cursor: pointer; }
+
+        /* 404 特殊樣式 */
+        .modal-box-error { background-color: #1a051a; border: 2px solid #ff0055; box-shadow: 0 0 20px rgba(255, 0, 85, 0.5); background-image: linear-gradient(rgba(255,0,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,0,255,0.1) 1px, transparent 1px); background-size: 20px 20px; }
+        .text-404 { color: #ff3333; font-family: monospace; font-size: 3.5rem; font-weight: 900; margin-bottom: 5px; line-height: 1; text-shadow: 0 0 5px #ff0000, 0 0 10px #8b0000; }
+        .text-404-sub { color: #ff9999; font-family: monospace; font-size: 0.8rem; margin-bottom: 20px; text-shadow: 0 0 2px #ff0000; }
+        
+        /* 修復彈窗 */
+        #btn-repair-complete, #repair-subtext { display: none; }
+        #repair-subtext { font-size: 0.9rem; color: #4caf50; margin-bottom: 15px; font-weight: bold; }
+        
+        @media (max-width: 600px) { h1 { font-size: 2.2rem; } .text-404 { font-size: 2.5rem; } }
+    </style>
+</head>
+<body>
+<!-- 音樂播放器 -->
+<!-- 為了確保在 iPhone 上能播放，必須使用 preload="auto" -->
+<audio id="bgm" preload="auto">
+    <source src="https://cdn.discordapp.com/attachments/1028289358429704202/1447846555842248764/happy_birthday_song.mp3?ex=69391bae&is=6937ca2e&hm=809a5cff7c70a3efa2d9ac8fa08ebfdbc412bcde77be3c15dad7ad8c7e52c641&" type="audio/mp3">
+</audio>
+
+<div id="transition-overlay"></div>
+<div id="floating-text"></div>
+<!-- 調整標題區域 -->
+<div id="title-overlay">
+    <h1 id="main-title">禮物?</h1>
+    <div id="main-subtitle-group" style="display: flex; justify-content: center; align-items: center; margin-top: 10px; pointer-events: none;">
+        <!-- 副標題元素：初始顯示提示 -->
+        <div id="main-subtitle">點擊禮物盒...?</div>
+    </div>
+</div>
+<div id="canvas-container"></div>
+
+<!-- 按鈕容器獨立 -->
+<div id="btn-replay-container">
+    <button id="btn-replay" style="display:none;" onclick="restartGameSoft()">
+        再玩一次
+    </button>
+</div>
+
+<!-- 彈窗群組 -->
+<div id="modal-1" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-text">
+            花費30元解鎖超值權限？<br>
+            <span style="font-size:0.9em;color:#888;text-decoration:line-through;">（原價99999元）</span>
+        </p>
+        <div class="modal-buttons">
+            <button class="btn btn-confirm" onclick="showModalA()">當然！</button>
+            <button class="btn btn-cancel" onclick="showModal2()">當然...不要。</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-2" class="modal-overlay">
+    <div class="modal-box">
+        <div class="value-badge">3333%超值</div>
+        <p class="modal-text">不然0.99美元就好（？）</p>
+        <div class="modal-buttons">
+            <button class="btn btn-confirm" onclick="showModalB()">哇啊真划算！</button>
+            <button class="btn btn-cancel" onclick="showModal3()">...</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-3" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-text">
+            不然0.0001就好<br>
+            <span style="font-size:0.9em;color:#888;">拜託嘛QwQ</span>
+        </p>
+        <div class="modal-buttons">
+            <button class="btn btn-confirm" onclick="showModalC()">好啦...</button>
+            <button class="btn btn-cancel" onclick="showModal4()">滾。</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-404" class="modal-overlay">
+    <div class="modal-box modal-box-error">
+        <p class="text-404">404 ERROR!</p>
+        <p class="text-404-sub">ReferenceError: function() is not defined</p>
+        <div class="modal-buttons">
+            <button class="btn btn-cancel" onclick="showModalY()">（？）</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-y" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-text">急急急急什麼急嘛，趕投胎啊？程式都壞掉了啦！</p>
+        <div class="modal-buttons">
+            <button class="btn btn-confirm" onclick="showModalZ()">凶凶凶凶屁凶？就別讓我下次見到你😡</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-z" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-text">對...對不起...都是我的錯...我一個人去角落修復程式...嗚嗚嗚嗚嗚嗚🥹</p>
+        <div class="modal-buttons">
+            <button class="btn btn-cancel" onclick="showRepairModal()">......</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-repair" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-text" id="repair-text">修復中.</p>
+        <p id="repair-subtext">已修復1211處錯誤</p>
+        <div class="modal-buttons">
+            <button id="btn-repair-complete" class="btn btn-confirm" onclick="confirmPayment()">原神（？）啟動！</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-a" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-text">謝謝妳的30歐元😘！</p>
+        <div class="modal-buttons">
+            <button class="btn btn-danger" onclick="showModalX()">靠！退錢！</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-b" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-text">0.99美元與30台幣有本質上的差別嗎0.0</p>
+        <div class="modal-buttons">
+            <button class="btn btn-danger" onclick="showModalX()">靠！退錢！</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-c" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-text">比特幣，面交，謝謝妳！❤️</p>
+        <div class="modal-buttons">
+            <button class="btn btn-danger" onclick="showModalX()">靠！退錢！</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-x" class="modal-overlay click-anywhere" onclick="unlockPermissionSequence()">
+    <div class="modal-box">
+        <p class="modal-text">欸嘿嘿來不及囉</p>
+    </div>
+</div>
+
+<div id="modal-4" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-text">0元？🥺</p>
+        <div class="modal-buttons">
+            <button class="btn btn-confirm" onclick="showModal5()">成交！</button>
+            <button class="btn btn-confirm" onclick="showModal5()">好</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-5" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-text">哈哈哈你上當了，剛剛的幣值是比特幣！</p>
+        <div class="modal-buttons">
+            <button class="btn btn-cancel" onclick="showModal6()">？</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-6" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-text">算上比特幣匯率，這樣總共是...0</p>
+        <div class="modal-buttons">
+            <button class="btn btn-cancel" onclick="showModal7()">...</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-7" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-text">...</p>
+        <div class="modal-buttons">
+            <button class="btn btn-cancel" onclick="showModal8()">...</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-8" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-text">......</p>
+        <div class="modal-buttons">
+            <button class="btn btn-cancel" onclick="showModal9()">......</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-9" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-text">。。。</p>
+        <div class="modal-buttons">
+            <button class="btn btn-cancel" onclick="showModal10()">。。。</button>
+        </div>
+    </div>
+</div>
+
+<div id="modal-10" class="modal-overlay click-anywhere" onclick="showModal11()">
+    <div class="modal-box">
+        <p class="modal-text">這破程式誰寫的...</p>
+    </div>
+</div>
+
+<div id="modal-11" class="modal-overlay click-anywhere" onclick="showModal12()">
+    <div class="modal-box">
+        <p class="modal-text">
+            愛誰誰，我不幹了<br>
+            <span style="font-size:0.9em;color:#888;">我又不是一天只賺7美分的詐騙仔</span>
+        </p>
+    </div>
+</div>
+
+<div id="modal-12" class="modal-overlay">
+    <div class="modal-box">
+        <p class="modal-text">0比特幣，面交，謝謝</p>
+        <div class="modal-buttons">
+            <button class="btn btn-confirm" onclick="confirmPayment()">沒完沒了了是吧（</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+<script>
+// 使用 IIFE (立即調用函式表達式) 包裹所有程式碼，避免污染全域範圍
+(function () {
+    "use strict";
+
+    // 煙火參數
+    const FIREWORK_POOL_SIZE = 80;
+    const FIREWORK_CYCLE_DURATION = 1500;
+    const FLOATING_TEXT_DURATION = 1200;
+
+    // 生日快樂副標題庫
+    const SUBTITLES = [
+        "(或許還有驚喜？)", // 必須是第一個，作為首次進入的標題
+        "(給我五星好評謝謝妳！)", "(嗚嗚我ㄉ貼圖要沒了)",
+        "(有個白癡忘記放副標題了0.0)", "(20051211美元解鎖完整版！)", "(贛我一定是預言家)",
+        "(救命我的卡戎會補血啦)", "(VV!!)", "(要破產惹><)", "(他的名字可能需要排列組合一下)"
+    ];
+
+    // 應用程式狀態管理
+    const state = {
+        isGiftScene: true,
+        isTransitioning: false,
+        isModalOpen: false,
+        isPermissionUnlocked: false,
+        isGiftLocked: false,
+        hasCakeBeenSeen: false,
+        modal2Timer: null,
+
+        isDragging: false,
+        isClickValid: true,
+        autoRotateSpeed: 0.003, // 弧度/幀 (將會被 deltaTime 調整)
+        targetRotationSpeed: 0.003,
+        currentRotationSpeed: 0,
+
+        dragHistory: [],
+        previousMousePosition: { x: 0, y: 0 },
+        initialPinchDistance: null,
+        initialScale: 1,
+
+        fireworkGlobalTime: 0,
+        previousRotationY: 0,
+        smoothedDeltaRotation: 0
+    };
+
+    let scene, camera, renderer, mainGroup, cakeGroup, giftGroup, raycaster, mouse;
+    let clock; // 新增 Clock 物件
+    const flames = [];
+    const fireworks = [];
+    
+    // Global references for gift animation
+    let giftLidGroup, initialLidY; 
+
+    const dom = {};
+
+    function cacheDom() {
+        dom.canvasContainer = document.getElementById("canvas-container");
+        dom.transitionOverlay = document.getElementById("transition-overlay");
+        dom.floatingText = document.getElementById("floating-text");
+        dom.mainTitle = document.getElementById("main-title");
+        dom.mainSubtitle = document.getElementById("main-subtitle");
+        dom.btnReplay = document.getElementById("btn-replay");
+        dom.body = document.body;
+        // 加入 BGM 參考
+        dom.bgm = document.getElementById("bgm");
+    }
+
+    function init() {
+        cacheDom();
+        clock = new THREE.Clock(); // 初始化時鐘
+        initThreeScene();
+        createSceneObjects();
+        initFireworksPool();
+        window.addEventListener("resize", onWindowResize, false);
+        animate();
+    }
+    
+    function initThreeScene() {
+        scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x050510, 0.002);
+
+        camera = new THREE.PerspectiveCamera(
+            50,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
+        camera.position.set(0, 12, 50);
+        camera.lookAt(0, -2, 0);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        dom.canvasContainer.appendChild(renderer.domElement);
+
+        raycaster = new THREE.Raycaster();
+        mouse = new THREE.Vector2();
+
+        scene.add(new THREE.AmbientLight(0xffebee, 0.6));
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(20, 30, 20);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        scene.add(dirLight);
+
+        const fillLight = new THREE.PointLight(0xffcdd2, 0.5);
+        fillLight.position.set(-20, 10, -20);
+        scene.add(fillLight);
+
+        const candleLight = new THREE.PointLight(0xffaa00, 0.5, 30);
+        candleLight.position.set(0, 15, 0);
+        scene.add(candleLight);
+
+        createStarfield();
+    }
+
+    function createSceneObjects() {
+        mainGroup = new THREE.Group();
+        mainGroup.position.y = -16;
+        scene.add(mainGroup);
+
+        createTable(mainGroup);
+
+        giftGroup = new THREE.Group();
+        createGiftBox(giftGroup); 
+        mainGroup.add(giftGroup);
+
+        cakeGroup = new THREE.Group();
+        createCake(cakeGroup);
+        cakeGroup.visible = false;
+        mainGroup.add(cakeGroup);
+    }
+    
+    function createTable(group) {
+        const material = new THREE.MeshStandardMaterial({
+            color: 0x5d4037,
+            roughness: 0.8
+        });
+
+        const top = new THREE.Mesh(
+            new THREE.CylinderGeometry(15, 15, 1, 64),
+            material
+        );
+        top.position.y = -0.5;
+        top.receiveShadow = true;
+        group.add(top);
+
+        const leg = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.5, 1.5, 50, 32),
+            material
+        );
+        leg.position.y = -25.5;
+        leg.receiveShadow = true;
+        group.add(leg);
+    }
+
+    // 實作禮物盒：改成中空樣式 + 外部貼片緞帶
+    function createGiftBox(group) {
+        const size = 17;
+        const height = size * 0.8;
+        const wallThickness = 1.0; // 牆壁厚度
+        const boxMaterial = new THREE.MeshStandardMaterial({
+            color: 0x81D8D0,
+            roughness: 0.3,
+            side: THREE.DoubleSide // 確保內外都看得到顏色
+        });
+
+        // --- 建立中空盒身 (5個面) ---
+        // 盒子的原點座標調整：原先實心盒子中心y = height/2。
+        // 我們讓這個新的盒身群組的底部對齊 y=0
+        const boxBodyGroup = new THREE.Group();
+        
+        // 1. 底部
+        const bottom = new THREE.Mesh(
+            new THREE.BoxGeometry(size, wallThickness, size),
+            boxMaterial
+        );
+        bottom.position.y = wallThickness / 2;
+        bottom.receiveShadow = true;
+        bottom.name = "giftBox";
+        boxBodyGroup.add(bottom);
+
+        // 2. 前後壁 (沿 Z 軸)
+        // 尺寸：寬度=size, 高度=height, 厚度=wallThickness
+        const frontWall = new THREE.Mesh(
+            new THREE.BoxGeometry(size, height, wallThickness),
+            boxMaterial
+        );
+        frontWall.position.set(0, height / 2, size / 2 - wallThickness / 2);
+        frontWall.castShadow = true;
+        frontWall.receiveShadow = true;
+        frontWall.name = "giftBox";
+        boxBodyGroup.add(frontWall);
+
+        const backWall = frontWall.clone();
+        backWall.position.set(0, height / 2, -(size / 2 - wallThickness / 2));
+        backWall.name = "giftBox";
+        boxBodyGroup.add(backWall);
+
+        // 3. 左右壁 (沿 X 軸)
+        // 尺寸：寬度=wallThickness, 高度=height, 深度=size - 2*wallThickness (避免重疊)
+        const leftWall = new THREE.Mesh(
+            new THREE.BoxGeometry(wallThickness, height, size - 2 * wallThickness),
+            boxMaterial
+        );
+        leftWall.position.set(-(size / 2 - wallThickness / 2), height / 2, 0);
+        leftWall.castShadow = true;
+        leftWall.receiveShadow = true;
+        leftWall.name = "giftBox";
+        boxBodyGroup.add(leftWall);
+
+        const rightWall = leftWall.clone();
+        rightWall.position.set((size / 2 - wallThickness / 2), height / 2, 0);
+        rightWall.name = "giftBox";
+        boxBodyGroup.add(rightWall);
+
+        group.add(boxBodyGroup);
+        // ---------------------------
+
+        // 禮物盒蓋群組 (Lid Group)
+        giftLidGroup = new THREE.Group(); 
+        group.add(giftLidGroup);
+        
+        const lidSize = size * 1.05;
+        const lidHeight = 1.5;
+
+        // 蓋子本體
+        const lid = new THREE.Mesh(
+            new THREE.BoxGeometry(lidSize, lidHeight, lidSize),
+            boxMaterial
+        );
+        lid.position.y = height + 0.75;
+        lid.castShadow = true;
+        lid.name = "giftBox"; 
+        giftLidGroup.add(lid);
+
+        // 緞帶材質
+        const ribbonMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.8
+        });
+
+        // --- 盒身貼片式緞帶 (只貼在外部，不貫穿內部) ---
+        const rWidth = 2.5;
+        const rThick = 0.4; // 稍微突出牆面
+        
+        // 前方緞帶 (貼在前牆外側)
+        const ribFront = new THREE.Mesh(
+            new THREE.BoxGeometry(rWidth, height, rThick),
+            ribbonMaterial
+        );
+        ribFront.position.set(0, height / 2, size / 2 + rThick / 2);
+        ribFront.castShadow = true;
+        ribFront.receiveShadow = true;
+        group.add(ribFront);
+
+        // 後方緞帶 (貼在後牆外側)
+        const ribBack = ribFront.clone();
+        ribBack.position.set(0, height / 2, -(size / 2 + rThick / 2));
+        group.add(ribBack);
+
+        // 左側緞帶 (貼在左牆外側)
+        const ribLeft = new THREE.Mesh(
+            new THREE.BoxGeometry(rThick, height, rWidth),
+            ribbonMaterial
+        );
+        ribLeft.position.set(-(size / 2 + rThick / 2), height / 2, 0);
+        ribLeft.castShadow = true;
+        ribLeft.receiveShadow = true;
+        group.add(ribLeft);
+
+        // 右側緞帶 (貼在右牆外側)
+        const ribRight = ribLeft.clone();
+        ribRight.position.set((size / 2 + rThick / 2), height / 2, 0);
+        group.add(ribRight);
+
+        // 底部緞帶 (十字交叉)
+        const ribBot1 = new THREE.Mesh(
+            new THREE.BoxGeometry(rWidth, rThick, size + rThick),
+            ribbonMaterial
+        );
+        ribBot1.position.set(0, -rThick/2, 0);
+        group.add(ribBot1);
+
+        const ribBot2 = new THREE.Mesh(
+            new THREE.BoxGeometry(size + rThick, rThick, rWidth),
+            ribbonMaterial
+        );
+        ribBot2.position.set(0, -rThick/2, 0);
+        group.add(ribBot2);
+        
+        // --- 蓋子貼片式緞帶 (修改為不貫穿蓋子底部) ---
+        const lidRibThick = 0.1; // 蓋子上的緞帶薄片厚度
+
+        // 蓋子頂部緞帶 (X軸向)
+        const lidRibTopX = new THREE.Mesh(
+             new THREE.BoxGeometry(lidSize + lidRibThick, lidRibThick, rWidth),
+             ribbonMaterial
+        );
+        lidRibTopX.position.set(0, lid.position.y + lidHeight/2 + lidRibThick/2, 0);
+        giftLidGroup.add(lidRibTopX);
+
+        // 蓋子頂部緞帶 (Z軸向)
+        const lidRibTopZ = new THREE.Mesh(
+             new THREE.BoxGeometry(rWidth, lidRibThick, lidSize + lidRibThick),
+             ribbonMaterial
+        );
+        lidRibTopZ.position.set(0, lid.position.y + lidHeight/2 + lidRibThick/2, 0);
+        giftLidGroup.add(lidRibTopZ);
+
+        // 蓋子側面緞帶 - 前
+        const lidRibFront = new THREE.Mesh(
+            new THREE.BoxGeometry(rWidth, lidHeight, lidRibThick),
+            ribbonMaterial
+        );
+        lidRibFront.position.set(0, lid.position.y, lidSize/2 + lidRibThick/2);
+        giftLidGroup.add(lidRibFront);
+
+        // 蓋子側面緞帶 - 後
+        const lidRibBack = lidRibFront.clone();
+        lidRibBack.position.set(0, lid.position.y, -(lidSize/2 + lidRibThick/2));
+        giftLidGroup.add(lidRibBack);
+
+        // 蓋子側面緞帶 - 左
+        const lidRibLeft = new THREE.Mesh(
+            new THREE.BoxGeometry(lidRibThick, lidHeight, rWidth),
+            ribbonMaterial
+        );
+        lidRibLeft.position.set(-(lidSize/2 + lidRibThick/2), lid.position.y, 0);
+        giftLidGroup.add(lidRibLeft);
+
+        // 蓋子側面緞帶 - 右
+        const lidRibRight = lidRibLeft.clone();
+        lidRibRight.position.set((lidSize/2 + lidRibThick/2), lid.position.y, 0);
+        giftLidGroup.add(lidRibRight);
+        
+        // ------------------------------------------------
+
+        // 蝴蝶結群組 (修正版4：正確的緞帶構成 - 扁面構成圓環)
+        const bowGroup = new THREE.Group();
+        // 修改處：將蝴蝶結整體位置往上抬高 (從 +0.5 改為 +1.2)
+        bowGroup.position.y = lid.position.y + 1.2; 
+        
+        // 參數定義 (避免與前面的變數名稱衝突)
+        const bowRWidth = 2.5;  // 緞帶寬度 (Renamed from rWidth)
+        const bowRThick = 0.2;  // 緞帶厚度 (Renamed from rThick)
+        const bowRadius = 1.8; // 圓環半徑
+
+        // 關鍵修正：
+        // 之前的 tube 是寬度(錯誤)，現在 tube 是厚度的一半(正確)
+        // 我們建立一個很細的環，然後在 Z 軸拉長它變成寬帶子
+        const bowGeo = new THREE.TorusGeometry(bowRadius, bowRThick / 2, 16, 64);
+        
+        // 計算 Z 軸拉伸比例： 目標寬度 / 原始直徑
+        const zScale = bowRWidth / bowRThick;
+
+        // 設定蝴蝶結張開的角度 (45度)
+        const bowAngle = Math.PI / 4; 
+
+        // 左邊的環
+        const leftBow = new THREE.Mesh(bowGeo, ribbonMaterial);
+        // 移到左側，並稍微往上提 (Y: 1.2 -> 1.6)
+        leftBow.position.set(-1.6, 1.6, 0); 
+        
+        // 縮放設定：
+        // X: 1.2 (稍微拉長)
+        // Y: 0.6 (壓扁成橢圓)
+        // Z: zScale (拉伸變成寬版緞帶)
+        leftBow.scale.set(1.2, 0.6, zScale); 
+        
+        // 旋轉設定：
+        // Z: Math.PI - bowAngle (180 - 45 = 135度) -> 讓橢圓指向左上方
+        // Y: -Math.PI / 6 -> 稍微向後開展
+        leftBow.rotation.set(0, -Math.PI / 6, Math.PI - bowAngle);
+        bowGroup.add(leftBow);
+
+        // 右邊的環
+        const rightBow = new THREE.Mesh(bowGeo, ribbonMaterial);
+        // 移到右側，並稍微往上提 (Y: 1.2 -> 1.6)
+        rightBow.position.set(1.6, 1.6, 0);
+        rightBow.scale.set(1.2, 0.6, zScale);
+        
+        // 旋轉設定：
+        // Z: bowAngle (45度) -> 讓橢圓指向右上方
+        // 對稱旋轉
+        rightBow.rotation.set(0, Math.PI / 6, bowAngle);
+        bowGroup.add(rightBow);
+
+        // 中心結 (模擬綁結處)
+        // 使用圓柱體，長度等於緞帶寬
+        const bowCenter = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.7, 0.7, 2.6, 32),
+            ribbonMaterial
+        );
+        // 轉90度讓圓柱橫躺 (Z軸)
+        bowCenter.rotation.x = Math.PI / 2;
+        bowCenter.rotation.z = Math.PI / 2;
+        // 稍微壓扁
+        bowCenter.scale.set(1, 0.7, 1); 
+        // 修改處：位置往下 (Y: 0.6 -> 0.4)，再往前突出 (Z: 0.9 -> 1.2)
+        bowCenter.position.set(0, 0.4, 1.2);
+        bowGroup.add(bowCenter);
+        
+        giftLidGroup.add(bowGroup);
+
+        initialLidY = giftLidGroup.position.y;
+    }
+
+    function createCake(group) {
+        const baseY = 0;
+        const pink = new THREE.MeshStandardMaterial({ color: 0xffb7c5, roughness: 0.6 });
+        const cream = new THREE.MeshStandardMaterial({ color: 0xfffff0, roughness: 0.8 });
+        const stand = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2 });
+
+        const plate = new THREE.Mesh(
+            new THREE.CylinderGeometry(11, 11, 0.5, 64),
+            stand
+        );
+        plate.position.y = baseY + 0.25;
+        plate.receiveShadow = true;
+        group.add(plate);
+
+        const leg = new THREE.Mesh(
+            new THREE.CylinderGeometry(2, 3, 3, 32),
+            stand
+        );
+        leg.position.y = baseY - 1.5;
+        group.add(leg);
+
+        const base = new THREE.Mesh(
+            new THREE.CylinderGeometry(5, 5, 0.4, 32),
+            stand
+        );
+        base.position.y = baseY - 3;
+        group.add(base);
+
+        const bottomHeight = 5.4;
+        const bottomRadius = 9;
+        const topHeight = 3.6;
+        const topRadius = 5.4;
+
+        const bottomLayer = new THREE.Mesh(
+            new THREE.CylinderGeometry(bottomRadius, bottomRadius, bottomHeight, 64),
+            pink
+        );
+        bottomLayer.position.y = baseY + 0.5 + bottomHeight / 2;
+        bottomLayer.castShadow = true;
+        group.add(bottomLayer);
+
+        addShellPiping(group, bottomRadius + 0.15, baseY + 0.7, 60, cream); 
+        addWaveLace(group, bottomRadius, baseY + 0.5 + bottomHeight * 0.6, 20, cream); 
+        addCloudPiping(group, bottomRadius, baseY + 0.5 + bottomHeight, 40, cream); 
+        decorateShelf(group, bottomRadius / 2 + topRadius / 2 + 0.5, baseY + 0.5 + bottomHeight);
+
+        const topLayer = new THREE.Mesh(
+            new THREE.CylinderGeometry(topRadius, topRadius, topHeight, 64),
+            pink
+        );
+        topLayer.position.y = baseY + 0.5 + bottomHeight + topHeight / 2;
+        topLayer.castShadow = true;
+        group.add(topLayer);
+
+        const topY = baseY + 0.5 + bottomHeight + topHeight;
+
+        addFluffyPiping(group, topRadius - 0.2, topY, 24, cream); 
+        decorateTopEdge(group, topRadius - 0.8, topY); 
+        createCandles(group, topRadius - 1.8, topY); 
+    }
+
+    function addShellPiping(group, radius, y, count, material) {
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2;
+            const mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(0.45, 16, 16, 0, Math.PI),
+                material
+            );
+            mesh.position.set(
+                Math.cos(angle) * radius,
+                y - 0.2,
+                Math.sin(angle) * radius
+            );
+            mesh.rotation.x = -Math.PI / 2;
+            mesh.rotation.z = angle + Math.PI / 2;
+            mesh.scale.set(1.1, 0.7, 1.3);
+            group.add(mesh);
+        }
+    }
+
+    function addWaveLace(group, radius, y, cycles, material) {
+        const points = [];
+        const segments = 250;
+        const amplitude = 0.7;
+
+        for (let i = 0; i <= segments; i++) {
+            const t = (i / segments) * Math.PI * 2;
+            const angle = t;
+            const height = y + Math.sin(angle * cycles) * amplitude;
+            points.push(
+                new THREE.Vector3(
+                    Math.cos(angle) * (radius + 0.08),
+                    height,
+                    Math.sin(angle) * (radius + 0.08)
+                )
+            );
+        }
+
+        const curve = new THREE.CatmullRomCurve3(points);
+        curve.closed = true;
+
+        const tube = new THREE.Mesh(
+            new THREE.TubeGeometry(curve, segments, 0.18, 8, true),
+            material
+        );
+        group.add(tube);
+
+        const pinkMaterial = new THREE.MeshBasicMaterial({ color: 0xff80ab });
+        const thinTube = new THREE.Mesh(
+            new THREE.TubeGeometry(curve, segments, 0.04, 8, true),
+            pinkMaterial
+        );
+        thinTube.scale.set(1.01, 1, 1.01);
+        group.add(thinTube);
+
+        for (let i = 0; i < cycles; i++) {
+            const angle = ((i + 0.75) / cycles) * Math.PI * 2;
+            createFlower(
+                group,
+                Math.cos(angle) * (radius + 0.15),
+                y - amplitude,
+                Math.sin(angle) * (radius + 0.15)
+            );
+        }
+    }
+
+    function createFlower(group, x, y, z) {
+        const flowerGroup = new THREE.Group();
+        flowerGroup.position.set(x, y, z);
+        flowerGroup.lookAt(0, y, 0);
+
+        const petal = new THREE.Mesh(
+            new THREE.CircleGeometry(0.2, 5),
+            new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                side: THREE.DoubleSide
+            })
+        );
+        flowerGroup.add(petal);
+
+        const center = new THREE.Mesh(
+            new THREE.CircleGeometry(0.07, 8),
+            new THREE.MeshBasicMaterial({ color: 0xffeb3b })
+        );
+        center.position.z = 0.015;
+        flowerGroup.add(center);
+
+        group.add(flowerGroup);
+    }
+
+    function addCloudPiping(group, radius, y, count, material) {
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2;
+            const mesh = new THREE.Mesh(
+                new THREE.SphereGeometry(0.5, 16, 16),
+                material
+            );
+            mesh.position.set(
+                Math.cos(angle) * radius,
+                y,
+                Math.sin(angle) * radius
+            );
+            mesh.scale.set(1.2, 0.8, 1);
+            group.add(mesh);
+        }
+    }
+
+    function addFluffyPiping(group, radius, y, count, material) {
+        for (let i = 0; i < count; i++) {
+            const angle = (i / count) * Math.PI * 2;
+            const mesh = new THREE.Mesh(
+                new THREE.IcosahedronGeometry(0.55, 1),
+                material
+            );
+            mesh.position.set(
+                Math.cos(angle) * radius,
+                y,
+                Math.sin(angle) * radius
+            );
+            mesh.scale.set(1, 0.8, 1);
+            mesh.rotation.y = Math.random() * Math.PI;
+            group.add(mesh);
+        }
+    }
+
+    function decorateShelf(group, radius, y) {
+        for (let i = 0; i < 15; i++) {
+            const angle = (i / 15) * Math.PI * 2;
+            const strawberry = createStrawberry();
+            strawberry.position.set(
+                Math.cos(angle) * radius,
+                y + 0.4,
+                Math.sin(angle) * radius
+            );
+            strawberry.rotation.y = -angle;
+            strawberry.rotateX(Math.PI / 12);
+            group.add(strawberry);
+        }
+    }
+
+    function decorateTopEdge(group, radius, y) {
+        for (let i = 0; i < 10; i++) {
+            const angle = (i / 10) * Math.PI * 2;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+
+            if (i % 2 === 0) {
+                const macaron = createMacaron();
+                macaron.position.set(x, y + 0.3, z);
+                macaron.lookAt(0, y, 0);
+                macaron.rotateX(Math.PI / 6);
+                group.add(macaron);
+            } else {
+                const strawberry = createStrawberry();
+                strawberry.position.set(x, y + 0.4, z);
+                strawberry.rotation.y = -angle;
+                strawberry.rotateX(Math.PI / 12);
+                group.add(strawberry);
+            }
+        }
+    }
+
+    function createCandles(group, radius, y) {
+        const createRing = (rad, count) => {
+            for (let i = 0; i < count; i++) {
+                const angle = (i / count) * Math.PI * 2;
+
+                const candle = new THREE.Mesh(
+                    new THREE.CylinderGeometry(0.08, 0.08, 1.2, 12),
+                    new THREE.MeshStandardMaterial({
+                        color: 0xffd700,
+                        metalness: 0.6,
+                        roughness: 0.2
+                    })
+                );
+                candle.position.set(
+                    Math.cos(angle) * rad,
+                    y + 0.6,
+                    Math.sin(angle) * rad
+                );
+                candle.castShadow = true;
+                group.add(candle);
+
+                const flame = new THREE.Mesh(
+                    new THREE.ConeGeometry(0.08, 0.3, 8),
+                    new THREE.MeshBasicMaterial({ color: 0xffaa00 })
+                );
+                flame.position.set(0, 0.75, 0);
+                candle.add(flame);
+
+                flames.push({
+                    mesh: flame,
+                    base: 1,
+                    spd: 0.15,
+                    off: Math.random() * 10
+                });
+            }
+        };
+
+        createRing(radius * 0.6, 8); 
+        createRing(radius, 12); 
+    }
+
+    function createStrawberry() {
+        const group = new THREE.Group();
+        const points = [];
+
+        for (let i = 0; i < 10; i++) {
+            points.push(new THREE.Vector2(Math.sin(i * 0.25) * 0.3, (i - 5) * 0.08));
+        }
+        points.push(new THREE.Vector2(0, 0.4));
+
+        const body = new THREE.Mesh(
+            new THREE.LatheGeometry(points, 16),
+            new THREE.MeshStandardMaterial({ color: 0xe91e63, roughness: 0.3 })
+        );
+        group.add(body);
+
+        const leafMaterial = new THREE.MeshStandardMaterial({
+            color: 0x228b22,
+            roughness: 1,
+            emissive: 0x114411,
+            emissiveIntensity: 0.3,
+            side: THREE.DoubleSide
+        });
+
+        const stem = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.04, 0.04, 0.2, 8),
+            leafMaterial
+        );
+        stem.position.y = 0.45;
+        group.add(stem);
+
+        const leafGroup = new THREE.Group();
+        leafGroup.position.y = 0.42;
+
+        const shape = new THREE.Shape();
+        shape.moveTo(0, 0);
+        shape.quadraticCurveTo(0.12, 0.08, 0, 0.25);
+        shape.quadraticCurveTo(-0.12, 0.08, 0, 0);
+
+        for (let i = 0; i < 5; i++) {
+            const geometry = new THREE.ShapeGeometry(shape, 5);
+            const pos = geometry.attributes.position;
+            for (let k = 0; k < pos.count; k++) {
+                pos.setZ(k, pos.getZ(k) + pos.getY(k) * pos.getY(k) * 1.5);
+            }
+            geometry.computeVertexNormals();
+
+            const leaf = new THREE.Mesh(geometry, leafMaterial);
+            const wrapper = new THREE.Group();
+            wrapper.rotation.y = (i / 5) * Math.PI * 2;
+            leaf.rotation.x = -Math.PI / 1.7;
+            wrapper.add(leaf);
+            leafGroup.add(wrapper);
+        }
+
+        group.add(leafGroup);
+        group.scale.set(1.5, 1.5, 1.5);
+
+        return group;
+    }
+
+    function createMacaron() {
+        const group = new THREE.Group();
+        const shellMaterial = new THREE.MeshStandardMaterial({
+            color: 0xf8bbd0, 
+            roughness: 0.5
+        });
+
+        const shellGeometry = new THREE.SphereGeometry(
+            0.4, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2.5
+        );
+
+        const top = new THREE.Mesh(shellGeometry, shellMaterial);
+        top.position.y = -0.06;
+        group.add(top);
+
+        const bottom = new THREE.Mesh(shellGeometry, shellMaterial);
+        bottom.rotation.x = Math.PI;
+        bottom.position.y = 0.06;
+        group.add(bottom);
+
+        const fillingMaterial = new THREE.MeshStandardMaterial({
+            color: 0xf8bbd0,
+            roughness: 1
+        });
+
+        const fillingGeometry = new THREE.TorusGeometry(0.38, 0.04, 12, 32);
+
+        const topFilling = new THREE.Mesh(fillingGeometry, fillingMaterial);
+        topFilling.rotation.x = Math.PI / 2;
+        topFilling.position.y = 0.05;
+        group.add(topFilling);
+
+        const bottomFilling = new THREE.Mesh(fillingGeometry, fillingMaterial);
+        bottomFilling.rotation.x = Math.PI / 2;
+        bottomFilling.position.y = -0.05;
+        group.add(bottomFilling);
+
+        const cream = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.36, 0.36, 0.12, 32),
+            new THREE.MeshStandardMaterial({ color: 0xffffff })
+        );
+        group.add(cream);
+
+        group.scale.set(1.2, 1.2, 1.2);
+        return group;
+    }
+
+    function createStarfield() {
+        const gSmall = new THREE.BufferGeometry();
+        const gMedium = new THREE.BufferGeometry();
+        const gLarge = new THREE.BufferGeometry();
+        const small = [];
+        const medium = [];
+        const large = [];
+        
+        const safeRadiusSq = 20 * 20; 
+        const totalStars = 2500;
+
+        for (let i = 0; i < totalStars; i++) {
+            let x, y, z;
+            let r;
+            
+            do {
+                x = (Math.random() - 0.5) * 500;
+                y = (Math.random() - 0.5) * 500;
+                z = (Math.random() - 0.5) * 500;
+            } while (x*x + y*y + z*z < safeRadiusSq);
+
+            r = Math.random();
+
+            if (r > 0.9) {
+                large.push(x, y, z);
+            } else if (r > 0.7) {
+                medium.push(x, y, z);
+            } else {
+                small.push(x, y, z);
+            }
+        }
+
+        if (small.length) {
+            gSmall.setAttribute(
+                "position",
+                new THREE.BufferAttribute(new Float32Array(small), 3)
+            );
+            scene.add(
+                new THREE.Points(
+                    gSmall,
+                    new THREE.PointsMaterial({
+                        size: 2,
+                        sizeAttenuation: false,
+                        color: 0xffffff,
+                        transparent: true,
+                        opacity: 0.8
+                    })
+                )
+            );
+        }
+
+        if (medium.length) {
+            gMedium.setAttribute(
+                "position",
+                new THREE.BufferAttribute(new Float32Array(medium), 3)
+            );
+            scene.add(
+                new THREE.Points(
+                    gMedium,
+                    new THREE.PointsMaterial({
+                        size: 2.4,
+                        sizeAttenuation: false,
+                        color: 0xffffff,
+                        transparent: true,
+                        opacity: 0.85
+                    })
+                )
+            );
+        }
+
+        if (large.length) {
+            gLarge.setAttribute(
+                "position",
+                new THREE.BufferAttribute(new Float32Array(large), 3)
+            );
+            scene.add(
+                new THREE.Points(
+                    gLarge,
+                    new THREE.PointsMaterial({
+                        size: 2.8,
+                        sizeAttenuation: false,
+                        color: 0xffffff,
+                        transparent: true,
+                        opacity: 0.9
+                    })
+                )
+            );
+        }
+    }
+
+    class Firework {
+        constructor(offset) {
+            this.offset = offset;
+            this.launchDuration = 30; // 從 60 減少到 30 (升空極快)
+            this.explosionDuration = 240; // 保持不變
+            this.totalDuration = 270; // 更新總時間 (30 + 240)
+
+            this.startPos = new THREE.Vector3(
+                (Math.random() - 0.5) * 100,
+                -30,
+                (Math.random() - 0.5) * 80 - 40
+            );
+            this.targetPos = new THREE.Vector3(
+                this.startPos.x,
+                8 + Math.random() * 15,
+                this.startPos.z
+            );
+            this.color = new THREE.Color().setHSL(Math.random(), 1, 0.6);
+
+            this.lightMesh = new THREE.Mesh(
+                new THREE.SphereGeometry(0.4, 8, 8),
+                new THREE.MeshBasicMaterial({ color: this.color })
+            );
+            scene.add(this.lightMesh);
+
+            this.particleGroup = new THREE.Group();
+            this.particlesData = [];
+
+            const particleGeometry = new THREE.SphereGeometry(0.25, 6, 6);
+            const particleMaterial = new THREE.MeshBasicMaterial({
+                color: this.color,
+                transparent: true
+            });
+
+            for (let i = 0; i < 80; i++) {
+                const particle = new THREE.Mesh(
+                    particleGeometry,
+                    particleMaterial.clone()
+                );
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                const speed = 0.4 + Math.random() * 0.6;
+
+                this.particleGroup.add(particle);
+                this.particlesData.push({
+                    mesh: particle,
+                    velocity: new THREE.Vector3(
+                        speed * Math.sin(phi) * Math.cos(theta),
+                        speed * Math.sin(phi) * Math.sin(theta),
+                        speed * Math.cos(phi)
+                    )
+                });
+            }
+
+            this.particleGroup.visible = false;
+            this.lightMesh.visible = false;
+            scene.add(this.particleGroup);
+        }
+
+        update(globalTime) {
+            let t = (globalTime + this.offset) % FIREWORK_CYCLE_DURATION;
+            if (t < 0) t += FIREWORK_CYCLE_DURATION;
+
+            if (t <= this.launchDuration) {
+                this.lightMesh.visible = true;
+                this.particleGroup.visible = false;
+                const ratio = 1 - Math.pow(1 - t / this.launchDuration, 2); 
+                this.lightMesh.position.lerpVectors(
+                    this.startPos,
+                    this.targetPos,
+                    ratio
+                );
+            } else if (t <= this.totalDuration) {
+                this.lightMesh.visible = false;
+                this.particleGroup.visible = true;
+                this.particleGroup.position.copy(this.targetPos);
+
+                const elapsed = t - this.launchDuration;
+                const progress = elapsed / this.explosionDuration;
+
+                this.particlesData.forEach((p) => {
+                    p.mesh.position.copy(p.velocity).multiplyScalar(elapsed);
+                    p.mesh.position.y -= 0.005 * elapsed * elapsed; 
+                    p.mesh.scale.setScalar(1 - progress * 0.5);
+                    p.mesh.material.opacity = 1 - progress;
+                });
+            } else {
+                this.lightMesh.visible = false;
+                this.particleGroup.visible = false;
+            }
+        }
+        
+        stop() {
+            // 透過將偏移時間設置為一個會導致 't' 始終處於閒置階段的值來隱藏粒子
+            this.offset = -FIREWORK_CYCLE_DURATION * 2; 
+            this.lightMesh.visible = false;
+            this.particleGroup.visible = false;
+        }
+    }
+
+    function initFireworksPool() {
+        for (let i = 0; i < FIREWORK_POOL_SIZE; i++) {
+             // 修正點 1. 初始隨機偏移，防止同步播放
+            fireworks.push(
+                new Firework(
+                    Math.random() * FIREWORK_CYCLE_DURATION
+                )
+            );
+        }
+    }
+
+
+    // 顯示短暫的浮動文字提示
+    function showFloatingText(text, color) {
+        const el = dom.floatingText;
+        el.innerText = text;
+        el.style.color = color;
+        el.classList.add("show");
+        
+        setTimeout(() => {
+            el.classList.remove("show");
+        }, FLOATING_TEXT_DURATION);
+    }
+
+    // 顯示模態彈窗
+    function showModal(id) {
+        closeAllModals();
+        const modal = document.getElementById(id);
+        if (modal) {
+            modal.classList.add("active");
+            state.isModalOpen = true;
+        }
+    }
+
+    // 關閉所有模態彈窗
+    function closeAllModals() {
+        document
+            .querySelectorAll(".modal-overlay")
+            .forEach((m) => m.classList.remove("active"));
+        state.isModalOpen = false;
+    }
+
+    // 觸發權限檢查和第一個模態窗
+    function triggerPermissionSequence() {
+        // 修正點 1: 在這裡立即隱藏副標題
+        dom.mainSubtitle.style.opacity = 0;
+        
+        showFloatingText("您尚未擁有解鎖禮物的權限！", "#ff3333");
+        setTimeout(() => showModal("modal-1"), FLOATING_TEXT_DURATION);
+    }
+
+    // 禮物解鎖過場動畫與場景切換
+    function openGift() {
+        if (state.isTransitioning) return;
+        
+        // === 關鍵修改：iOS 音訊解鎖 (Audio Unlock) ===
+        // 在使用者觸發點擊的當下，立刻播放並暫停，取得播放權限
+        if (dom.bgm) {
+            dom.bgm.volume = 0; // 先靜音，避免聽到雜音
+            dom.bgm.play().then(() => {
+                dom.bgm.pause();
+                dom.bgm.currentTime = 0;
+                dom.bgm.volume = 1; // 恢復音量，準備真正播放
+            }).catch((e) => {
+                console.log("iOS 音訊權限獲取失敗，可能需要使用者再次互動", e);
+            });
+        }
+        // ==========================================
+        
+        state.isTransitioning = true;
+        dom.body.style.pointerEvents = 'none'; // 禁用點擊
+
+        // 設置進入蛋糕轉場的顏色為淺灰色
+        dom.transitionOverlay.style.backgroundColor = '#e6e6e6'; 
+        dom.transitionOverlay.style.opacity = 1; 
+
+        // --- 新增: 禮物蓋向上開啟的動畫 ---
+        const liftDuration = 1200; 
+        const liftHeight = 30;
+        let startTime = Date.now();
+
+        function animateLid() {
+            const elapsed = Date.now() - startTime;
+            const progress = Math.min(1, elapsed / liftDuration);
+            
+            if (giftLidGroup) {
+                // 使用 group 的 position 來控制整個蓋子 + 緞帶 + 蝴蝶結
+                const yOffset = liftHeight * progress; 
+                giftLidGroup.position.y = yOffset;
+            }
+
+            if (progress < 1) {
+                requestAnimationFrame(animateLid);
+            } else {
+                 if (giftLidGroup) {
+                    giftLidGroup.position.y = liftHeight;
+                }
+            }
+        }
+        requestAnimationFrame(animateLid);
+        // ------------------------------------
+
+        setTimeout(() => { // Executes at 1.2s (when opaque)
+            // --- Scene Switch Logic ---
+            state.isGiftScene = false;
+            giftGroup.visible = false;
+            cakeGroup.visible = true;
+
+            // 重置蓋子組的位置，以便下次重啟時使用
+            if (giftLidGroup) {
+                giftLidGroup.position.y = 0;
+            }
+            
+            dom.mainTitle.innerText = "阿妃生日快樂！";
+            dom.mainTitle.classList.add("neon-active");
+
+            // 處理副標題
+            let subtitleText = SUBTITLES[0]; 
+            if (state.hasCakeBeenSeen) {
+                let randomSubtitles = SUBTITLES.slice(1);
+                if (randomSubtitles.length > 0) {
+                    subtitleText = randomSubtitles[Math.floor(Math.random() * randomSubtitles.length)];
+                } 
+            }
+            state.hasCakeBeenSeen = true;
+
+            dom.mainSubtitle.innerText = subtitleText;
+            dom.mainSubtitle.style.opacity = 1;
+
+            dom.btnReplay.style.display = 'flex';
+
+            state.currentRotationSpeed = state.autoRotateSpeed;
+
+            // 這裡是白幕持續的時間，目前設定 1200ms (1.2秒) 後開始淡出
+            setTimeout(() => { 
+                // === 修改處：音樂移到這裡播放 (蛋糕揭曉的瞬間) ===
+                if (dom.bgm) {
+                    // 嘗試播放音樂
+                    dom.bgm.currentTime = 0;
+                    dom.bgm.play().catch(e => console.log("播放失敗，可能是瀏覽器限制:", e));
+                }
+                // ===========================================
+
+                dom.transitionOverlay.style.opacity = 0; // 開始變透明
+                
+                // 等待透明度動畫完成後 (CSS transition 1.2s)，才恢復點擊
+                setTimeout(() => {
+                    state.isTransitioning = false;
+                    dom.body.style.pointerEvents = 'auto'; 
+                }, 1200); 
+                
+            }, 1200); // 這裡的數值控制「白幕停留多久」，您可以改成 2000 讓它停更久
+        }, 1200); // Wait for transition in duration
+    }
+
+    // 模態窗 2 邏輯 (帶有計時器的彩蛋)
+    function showModal2() {
+        closeAllModals();
+        showFloatingText("0.0！", "#fff");
+        // 延遲同步到浮動文字持續時間
+        state.modal2Timer = setTimeout(() => {
+            showModal("modal-2");
+            state.modal2Timer = null;
+        }, FLOATING_TEXT_DURATION);
+    }
+    
+    // 設置禮物鎖定狀態
+    function showModal3AndLockGift() {
+        closeAllModals();
+        state.isGiftLocked = true; // 設置鎖定狀態
+        showModal("modal-3");
+    }
+
+    // 修復彈窗的動畫邏輯 (修正 1)
+    function showRepairModal() {
+        showModal("modal-repair");
+
+        const text = document.getElementById("repair-text");
+        const subtext = document.getElementById("repair-subtext");
+        const btn = document.getElementById("btn-repair-complete");
+
+        const sequence = ["修復中.", "修復中..", "修復中..."];
+        let count = 0;
+        let index = 0;
+        const totalCycles = 3; // 確保循環次數
+
+        btn.style.display = "none";
+        subtext.style.display = "none";
+        text.innerText = sequence[0]; // 確保初始顯示為第一個
+
+        const interval = setInterval(() => {
+            // 每次計時器觸發，增加 index，並檢查是否完成一個完整的循環 (3個點)
+            index = (index + 1) % sequence.length;
+            text.innerText = sequence[index];
+
+            // 只有當 index 回到 0 時，才增加 count
+            if (index === 0) {
+                count++;
+            }
+
+            // 檢查是否達到總循環次數
+            if (count >= totalCycles) {
+                clearInterval(interval);
+                text.innerText = "修復完成！";
+                subtext.style.display = "block";
+                btn.style.display = "inline-block";
+            }
+        }, 700);
+    }
+
+    // 確認支付/解鎖，並解除鎖定
+    function confirmPayment() {
+        closeAllModals();
+        state.isPermissionUnlocked = true; // 確保權限被設定
+        state.isGiftLocked = false; // 解除鎖定
+        setTimeout(openGift, 200);
+    }
+
+    // 直接解鎖權限，並解除鎖定
+    function unlockPermissionSequence() {
+        closeAllModals();
+        showFloatingText("已成功解鎖權限！", "#33ff33");
+        state.isPermissionUnlocked = true;
+        state.isGiftLocked = false; // 解除鎖定
+    }
+    
+    // 2. 軟重啟遊戲功能 (Soft Reset)
+    function restartGameSoft() {
+        if (state.isTransitioning) return;
+        
+        state.isTransitioning = true;
+        dom.body.style.pointerEvents = 'none'; // 禁用點擊
+
+        // 設置重啟轉場的顏色為黑色
+        dom.transitionOverlay.style.backgroundColor = '#050510'; 
+        dom.transitionOverlay.style.opacity = 1;
+
+        // 重啟轉場提示
+        showFloatingText("重啟中...", "#fff"); 
+
+        // === 停止並重置音樂 ===
+        if (dom.bgm) {
+            dom.bgm.pause();
+            dom.bgm.currentTime = 0;
+        }
+        // ====================
+
+        // 停止煙火並重新隨機分配偏移 (修正點 1)
+        fireworks.forEach(fw => {
+            fw.stop();
+            fw.offset = Math.random() * FIREWORK_CYCLE_DURATION;
+        });
+
+        // 重設所有狀態
+        state.isGiftScene = true;
+        state.isPermissionUnlocked = false;
+        state.isGiftLocked = false;
+        state.modal2Timer = null;
+        // state.hasCakeBeenSeen 保持其值 (true 或 false)，以確保下次點擊時進入隨機副標題邏輯
+        state.currentRotationSpeed = 0;
+        state.targetRotationSpeed = 0.003;
+        mainGroup.scale.set(1, 1, 1);
+        mainGroup.rotation.y = 0;
+        
+        dom.btnReplay.style.display = 'none';
+
+        setTimeout(() => {
+            // 切換場景物件的可見性 (在轉場快結束時)
+            giftGroup.visible = true;
+            cakeGroup.visible = false;
+            
+            // 重置蓋子位置 (確保它回到了 Group 的原點)
+            if (giftLidGroup) {
+                giftLidGroup.position.y = 0;
+            }
+
+            // 重置標題
+            dom.mainTitle.innerText = "禮物?";
+            dom.mainTitle.classList.remove("neon-active");
+            
+            // 重置副標題為提示文字
+            dom.mainSubtitle.innerText = "點擊禮物盒...?";
+            dom.mainSubtitle.style.opacity = 1;
+
+            // 轉場結束
+            setTimeout(() => {
+                dom.transitionOverlay.style.opacity = 0;
+                state.isTransitioning = false;
+                dom.body.style.pointerEvents = 'auto'; // 恢復點擊
+            }, 1200);
+        }, 1200);
+    }
+
+
+    // 將所有模態窗處理函式掛載到 window，以便 HTML 內聯 onclick 呼叫
+    window.showModal2 = showModal2;
+    window.showModal3 = showModal3AndLockGift;
+    window.showModal4 = () => showModal("modal-4");
+    window.showModal5 = () => showModal("modal-5");
+    window.showModal6 = () => showModal("modal-6");
+    window.showModal7 = () => showModal("modal-7");
+    window.showModal8 = () => showModal("modal-8");
+    window.showModal9 = () => showModal("modal-9");
+    window.showModal10 = () => showModal("modal-10");
+    window.showModal11 = () => showModal("modal-11");
+    window.showModal12 = () => showModal("modal-12");
+
+    window.showModal404 = () => showModal("modal-404");
+    window.showModalY = () => showModal("modal-y");
+    window.showModalZ = () => showModal("modal-z");
+    window.showModalA = () => showModal("modal-a");
+    window.showModalB = () => showModal("modal-b");
+    window.showModalC = () => showModal("modal-c");
+    window.showModalX = () => showModal("modal-x"); 
+
+    window.showRepairModal = showRepairModal; 
+    window.confirmPayment = confirmPayment;
+    window.unlockPermissionSequence = unlockPermissionSequence;
+    window.restartGameSoft = restartGameSoft; // 匯出軟重啟功能 (用於按鈕點擊)
+
+    // 設置滑鼠和觸控互動
+    function setupInteraction() {
+        const container = dom.canvasContainer;
+
+        const start = (x, y) => {
+            if (state.isModalOpen || state.isTransitioning) return; // 檢查鎖定狀態
+            state.isDragging = true;
+            state.isClickValid = true;
+            state.previousMousePosition = { x, y };
+            state.dragHistory = [
+                {
+                    t: Date.now(),
+                    y: mainGroup ? mainGroup.rotation.y : 0
+                }
+            ];
+            if (!state.isGiftScene) state.currentRotationSpeed = 0;
+        };
+
+        const move = (x, y) => {
+            if (!state.isDragging) return;
+
+            if (Math.abs(x - state.previousMousePosition.x) > 2 || Math.abs(y - state.previousMousePosition.y) > 2) {
+                state.isClickValid = false;
+            }
+
+            if (mainGroup) {
+                const dx = x - state.previousMousePosition.x;
+                if (!state.isGiftScene) {
+                    mainGroup.rotation.y += dx * 0.005;
+                }
+                
+                const now = Date.now();
+                state.dragHistory.push({
+                    t: now,
+                    y: mainGroup.rotation.y
+                });
+                state.dragHistory = state.dragHistory.filter(
+                    (d) => now - d.t < 150
+                );
+            }
+
+            state.previousMousePosition = { x, y };
+        };
+
+        const end = (clientX, clientY) => {
+            if (!state.isDragging) return;
+            state.isDragging = false;
+            
+            // 在點擊處理中也檢查鎖定狀態 (包括浮動提示)
+            if (state.isClickValid && !state.isModalOpen && !state.isTransitioning) { 
+                mouse.x = (clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+                raycaster.setFromCamera(mouse, camera);
+
+                if (state.isGiftScene) {
+                    const hits = raycaster.intersectObjects(
+                        giftGroup.children,
+                        true
+                    );
+                    const hitGift = hits.some(
+                        (h) => h.object.name === "giftBox"
+                    );
+
+                    if (hitGift) {
+                        // 檢查 404 彩蛋觸發條件 (修正點 1)
+                        if (state.modal2Timer) {
+                            clearTimeout(state.modal2Timer);
+                            state.modal2Timer = null;
+                            showModal("modal-404");
+                            return; // 阻止執行後續邏輯
+                        }
+                        
+                        if (state.isGiftLocked && !state.isPermissionUnlocked) {
+                            showFloatingText("禮物已上鎖，請完成交易或嘗試其他方法。", "#ff3333");
+                            return;
+                        }
+
+                        if (state.isPermissionUnlocked) {
+                            openGift();
+                        } else {
+                            triggerPermissionSequence();
+                        }
+                    }
+                }
+            }
+
+            if (!state.isGiftScene) {
+                const now = Date.now();
+                const first = state.dragHistory[0];
+
+                if (first && now - first.t > 0) {
+                    const velocity =
+                        (mainGroup.rotation.y - first.y) / (now - first.t);
+                    state.currentRotationSpeed = velocity * 16; 
+                } else {
+                    state.currentRotationSpeed = 0;
+                }
+
+                state.targetRotationSpeed = state.autoRotateSpeed; 
+            }
+        };
+
+        container.addEventListener(
+            "wheel",
+            (e) => {
+                if (!state.isModalOpen && mainGroup) {
+                    e.preventDefault();
+                    let scale =
+                        mainGroup.scale.x * (1 + e.deltaY * -0.001);
+                    scale = Math.max(1, Math.min(3, scale)); 
+                    mainGroup.scale.set(scale, scale, scale);
+                    state.initialScale = scale;
+                }
+            },
+            { passive: false }
+        );
+
+        container.addEventListener("mousedown", (e) =>
+            start(e.clientX, e.clientY)
+        );
+        window.addEventListener("mousemove", (e) =>
+            move(e.clientX, e.clientY)
+        );
+        window.addEventListener("mouseup", (e) =>
+            end(e.clientX, e.clientY)
+        );
+
+        container.addEventListener(
+            "touchstart",
+            (e) => {
+                if (state.isModalOpen || state.isTransitioning) return; // 檢查鎖定狀態
+                if (e.touches.length === 1) {
+                    start(e.touches[0].clientX, e.touches[0].clientY);
+                } else if (e.touches.length === 2) {
+                    state.initialPinchDistance = getPinchDistance(
+                        e.touches[0],
+                        e.touches[1]
+                    );
+                    if (mainGroup) state.initialScale = mainGroup.scale.x;
+                }
+            },
+            { passive: false }
+        );
+
+        container.addEventListener(
+            "touchmove",
+            (e) => {
+                if (state.isModalOpen || state.isTransitioning) return;
+                if (e.touches.length === 1) {
+                    move(e.touches[0].clientX, e.touches[0].clientY);
+                } else if (
+                    e.touches.length === 2 &&
+                    state.initialPinchDistance
+                ) {
+                    const current = getPinchDistance(
+                        e.touches[0],
+                        e.touches[1]
+                    );
+                    let scale =
+                        state.initialScale *
+                        (current / state.initialPinchDistance);
+                    scale = Math.max(1, Math.min(3, scale));
+                    if (mainGroup) mainGroup.scale.set(scale, scale, scale);
+                }
+            },
+            { passive: false }
+        );
+
+        container.addEventListener(
+            "touchend",
+            (e) => {
+                if (e.touches.length === 0) {
+                    end(
+                        state.previousMousePosition.x,
+                        state.previousMousePosition.y
+                    );
+                } else if (e.touches.length < 2) {
+                    state.initialPinchDistance = null;
+                }
+            },
+            { passive: false }
+        );
+    }
+
+    // 計算兩點之間的距離 (用於捏合縮放)
+    function getPinchDistance(t1, t2) {
+        const dx = t1.clientX - t2.clientX;
+        const dy = t1.clientY - t2.clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // 主渲染循環
+    function animate() {
+        requestAnimationFrame(animate);
+
+        // 使用 Clock 計算 Delta Time (秒)
+        const dt = clock.getDelta();
+        // 我們將基準設為 60FPS (1/60 ~= 0.01666)，使用倍率來調整速度
+        const timeScale = dt * 60; 
+
+        if (state.isGiftScene) {
+            renderer.render(scene, camera);
+            return;
+        }
+
+        let deltaRotation = 0;
+        if (mainGroup) {
+            const currentRotation = mainGroup.rotation.y;
+            deltaRotation = currentRotation - state.previousRotationY;
+            state.previousRotationY = currentRotation;
+        }
+
+        if (!state.isDragging) {
+            // 使用 timeScale 平滑速度變化
+            state.currentRotationSpeed +=
+                (state.targetRotationSpeed - state.currentRotationSpeed) * 0.05 * timeScale;
+            
+            if (mainGroup) {
+                // 使用 timeScale 調整旋轉速度
+                mainGroup.rotation.y += state.currentRotationSpeed * timeScale;
+            }
+        }
+
+        const t = Date.now() * 0.005;
+        flames.forEach((f) => {
+            f.mesh.scale.set(
+                1,
+                Math.sin(t * f.spd + f.off) * 0.2 + 0.8,
+                1
+            );
+        });
+
+        state.smoothedDeltaRotation +=
+            (deltaRotation - state.smoothedDeltaRotation) * 0.1 * timeScale;
+        
+        // 煙火更新也需要基於 timeScale，這裡簡化處理，因為 update 內部是基於 globalTime
+        state.fireworkGlobalTime += state.smoothedDeltaRotation * 150;
+        
+        // 注意：Firework 內部的 update 是基於時間戳記的，所以不需要額外乘 timeScale
+        // 但是觸發頻率受到了 fireworkGlobalTime 影響，這已經被 deltaRotation 間接修正了
+        fireworks.forEach((fw) => fw.update(state.fireworkGlobalTime));
+
+        renderer.render(scene, camera);
+    }
+
+    // 視窗大小改變時，更新相機和渲染器
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    // DOM 加載完成後，初始化並設置互動
+    window.addEventListener("DOMContentLoaded", () => {
+        init();
+        setupInteraction();
+        // 初始狀態：移除 floating text，因為已經由 subtitle 取代
+    });
+})();
+</script>
+</body>
+</html>
